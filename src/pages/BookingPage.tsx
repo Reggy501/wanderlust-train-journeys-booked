@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
@@ -33,9 +33,32 @@ const BookingPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   
+  useEffect(() => {
+    // Redirect if not authenticated
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to book tickets",
+        variant: "destructive",
+      });
+    }
+  }, [isAuthenticated, toast]);
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
+    // Check authentication first
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to book tickets",
+        variant: "destructive",
+      });
+      navigate('/login');
+      setIsSubmitting(false);
+      return;
+    }
     
     // Validation
     if (!departureCity || !arrivalCity || !date) {
@@ -70,7 +93,7 @@ const BookingPage = () => {
     };
     
     // Save ticket to local storage
-    if (isAuthenticated && user) {
+    if (user) {
       const storedTickets = localStorage.getItem(`trainEasyTickets_${user.id}`);
       const tickets = storedTickets ? JSON.parse(storedTickets) : [];
       tickets.push(ticket);
@@ -83,17 +106,47 @@ const BookingPage = () => {
       
       // Redirect to tickets page
       navigate('/tickets');
-    } else {
-      toast({
-        title: "Please login",
-        description: "You need to be logged in to book tickets",
-        variant: "destructive",
-      });
-      navigate('/login');
     }
     
     setIsSubmitting(false);
   };
+  
+  if (!isAuthenticated) {
+    return (
+      <div className="py-12 px-4 bg-slate-50 min-h-[calc(100vh-200px)]">
+        <div className="container mx-auto max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Authentication Required</CardTitle>
+              <CardDescription>
+                You need to be logged in to book tickets
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center space-y-4 py-8">
+              <LogIn className="h-16 w-16 text-train-primary mb-4" />
+              <p className="text-center text-gray-600">
+                Please log in or create an account to access our booking system
+              </p>
+            </CardContent>
+            <CardFooter className="flex justify-center space-x-4">
+              <Button
+                onClick={() => navigate('/login')}
+                className="bg-train-primary hover:bg-train-secondary"
+              >
+                Log In
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/register')}
+              >
+                Register
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="py-12 px-4 bg-slate-50">

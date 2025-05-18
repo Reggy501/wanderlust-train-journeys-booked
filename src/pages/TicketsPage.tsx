@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
-import { TrainFront, Ticket, Calendar, User } from "lucide-react";
+import { TrainFront, Ticket, Calendar, User, LogIn } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface TicketType {
   id: string;
@@ -21,26 +22,24 @@ const TicketsPage = () => {
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Redirect if not authenticated
+    // Show toast if not authenticated
     if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
-    // Load tickets from local storage
-    if (user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to view your tickets",
+        variant: "destructive",
+      });
+    } else if (user) {
+      // Load tickets from local storage if authenticated
       const storedTickets = localStorage.getItem(`trainEasyTickets_${user.id}`);
       if (storedTickets) {
         setTickets(JSON.parse(storedTickets));
       }
     }
-  }, [isAuthenticated, navigate, user]);
-
-  if (!isAuthenticated) {
-    return null; // Will redirect in useEffect
-  }
+  }, [isAuthenticated, navigate, user, toast]);
 
   const formatDate = (dateString: string) => {
     try {
@@ -49,6 +48,43 @@ const TicketsPage = () => {
       return dateString;
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="py-12 px-4 bg-slate-50 min-h-[calc(100vh-200px)]">
+        <div className="container mx-auto max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Authentication Required</CardTitle>
+              <CardDescription>
+                You need to be logged in to view your tickets
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center space-y-4 py-8">
+              <LogIn className="h-16 w-16 text-train-primary mb-4" />
+              <p className="text-center text-gray-600">
+                Please log in or create an account to access your tickets
+              </p>
+            </CardContent>
+            <CardFooter className="flex justify-center space-x-4">
+              <Button
+                onClick={() => navigate('/login')}
+                className="bg-train-primary hover:bg-train-secondary"
+              >
+                Log In
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/register')}
+              >
+                Register
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-12 px-4 bg-slate-50">
